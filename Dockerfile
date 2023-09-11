@@ -1,38 +1,28 @@
-ARG FLYTECONSOLE_VERSION=latest
-FROM ghcr.io/flyteorg/flyteconsole:${FLYTECONSOLE_VERSION} AS flyteconsole
+FROM python:3.8-slim-buster
 
+WORKDIR /root
+ENV VENV /opt/venv
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ENV PYTHONPATH /root
 
-FROM --platform=${BUILDPLATFORM} golang:1.19.1-bullseye AS flytebuilder
+RUN apt-get update && apt-get install -y build-essential
 
-ARG TARGETARCH
-ENV GOARCH "${TARGETARCH}"
-ENV GOOS linux
+ENV VENV /opt/venv
+ENV SENDGRID_API_KEY "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"
 
-WORKDIR /flyteorg/build
-COPY go.mod go.sum ./
-RUN go mod download
-COPY cmd cmd
-COPY --from=flyteconsole /app/ cmd/single/dist
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/root/go/pkg/mod \
-    go build -tags console -v -o dist/flyte cmd/main.go
+# Virtual environment
+RUN python3 -m venv ${VENV}
+ENV PATH="${VENV}/bin:$PATH"
 
+# Install Python dependencies
+COPY requirements.txt /root
+RUN pip install -r /root/requirements.txt
 
-FROM debian:bullseye-slim
+# Copy the actual code
+COPY . /root
 
-ARG FLYTE_VERSION
-ENV FLYTE_VERSION "${FLYTE_VERSION}"
-
-ENV DEBCONF_NONINTERACTIVE_SEEN true
-ENV DEBIAN_FRONTEND noninteractive
-
-# Install core packages
-RUN apt-get update && apt-get install --no-install-recommends --yes \
-        ca-certificates \
-        tini \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy compiled executable into image
-COPY --from=flytebuilder /flyteorg/build/dist/flyte /usr/local/bin/
-
-# Set entrypoint
-ENTRYPOINT [ "/usr/bin/tini", "-g", "--", "/usr/local/bin/flyte" ]
+# This tag is supplied by the build script and will be used to determine the version
+# when registering tasks, workflows, and launch plans
+ARG tag
+ENV FLYTE_INTERNAL_IMAGE $tag

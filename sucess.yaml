@@ -1,5 +1,3 @@
-# This is a sample configuration file for running single-binary Flyte locally against
-# a sandbox.
 admin:
   endpoint: localhost:8089
   insecure: true
@@ -73,19 +71,19 @@ plugins:
       - custom_task
     # By default, all the request will be sent to the default agent.
     defaultAgent:
-      endpoint: "dns:///localhost:8000"
+      endpoint: "dns:///localhost:8000" 
       insecure: true
       timeouts:
-        GetTask: 100s
-      defaultTimeout: 100s
+        GetTask: 10s
+      defaultTimeout: 10s
     agents:
       custom_agent:
-        endpoint: "dns:///localhost:7777"
+        endpoint: "dns:///localhost:8000"
         insecure: false
         defaultServiceConfig: '{"loadBalancingConfig": [{"round_robin":{}}]}'
         timeouts:
-          GetTask: 100s
-        defaultTimeout: 100s
+          GetTask: 100ms
+        defaultTimeout: 20ms
     agentForTaskTypes:
       # It will override the default agent for custom_task, which means propeller will send the request to this agent.
       - custom_task: custom_agent
@@ -112,16 +110,3 @@ storage:
       access_key_id: minio
       secret_key: miniostorage
   container: my-s3-bucket
-
-notifications:
-  type: sandbox
-  emailer:
-    emailServerConfig:
-      serviceName: "sendgrid"
-      apiKeyEnvVar: "SENDGRID_API_KEY"
-    subject: "Notice: Execution \"{{ name }}\" has {{ phase }} in \"{{ domain }}\"."
-    sender: "eric901201@gmail.com"  # Consider using a generic email instead of personal
-    body: >
-      Execution \"{{ name }}\" has {{ phase }} in \"{{ domain }}\". View details at
-      <a href=\http://example.com/projects/{{ project }}/domains/{{ domain }}/executions/{{ name }}>
-      http://example.com/projects/{{ project }}/domains/{{ domain }}/executions/{{ name }}</a>. {{ error }}
